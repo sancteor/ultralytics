@@ -653,21 +653,31 @@ class SpatialAttention(nn.Module):
 class CBAM(nn.Module):
     def __init__(self, c1, reduction=16):
         super().__init__()
-        self.channel_attention = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+
+        self.channel_mlp = nn.Sequential(
             nn.Conv2d(c1, c1 // reduction, 1),
             nn.ReLU(),
             nn.Conv2d(c1 // reduction, c1, 1),
-            nn.Sigmoid()
         )
+
         self.spatial_attention = nn.Sequential(
             nn.Conv2d(2, 1, 7, padding=3),
             nn.Sigmoid()
         )
 
+        self.sigmoid = nn.Sigmoid()
+
     def forward(self, x):
-        ca = self.channel_attention(x) * x
-        sa = self.spatial_attention(torch.cat([ca.mean(1, keepdim=True), ca.max(1, keepdim=True)[0]], 1))
+        avg_out = self.channel_mlp(self.avg_pool(x))
+        max_out = self.channel_mlp(self.max_pool(x))
+        ca = self.sigmoid(avg_out + max_out) * x
+
+        sa = self.spatial_attention(torch.cat(
+            [ca.mean(1, keepdim=True), ca.max(1, keepdim=True)[0]], dim=1
+        ))
+
         return sa * ca
 
 
