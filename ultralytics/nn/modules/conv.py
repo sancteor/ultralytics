@@ -615,40 +615,60 @@ class SpatialAttention(nn.Module):
         return x * self.act(self.cv1(torch.cat([torch.mean(x, 1, keepdim=True), torch.max(x, 1, keepdim=True)[0]], 1)))
 
 
+# class CBAM(nn.Module):
+#     """
+#     Convolutional Block Attention Module.
+
+#     Combines channel and spatial attention mechanisms for comprehensive feature refinement.
+
+#     Attributes:
+#         channel_attention (ChannelAttention): Channel attention module.
+#         spatial_attention (SpatialAttention): Spatial attention module.
+#     """
+
+#     def __init__(self, c1, kernel_size=7):
+#         """
+#         Initialize CBAM with given parameters.
+
+#         Args:
+#             c1 (int): Number of input channels.
+#             kernel_size (int): Size of the convolutional kernel for spatial attention.
+#         """
+#         super().__init__()
+#         self.channel_attention = ChannelAttention(c1)
+#         self.spatial_attention = SpatialAttention(kernel_size)
+
+#     def forward(self, x):
+#         """
+#         Apply channel and spatial attention sequentially to input tensor.
+
+#         Args:
+#             x (torch.Tensor): Input tensor.
+
+#         Returns:
+#             (torch.Tensor): Attended output tensor.
+#         """
+#         return self.spatial_attention(self.channel_attention(x))
+
 class CBAM(nn.Module):
-    """
-    Convolutional Block Attention Module.
-
-    Combines channel and spatial attention mechanisms for comprehensive feature refinement.
-
-    Attributes:
-        channel_attention (ChannelAttention): Channel attention module.
-        spatial_attention (SpatialAttention): Spatial attention module.
-    """
-
-    def __init__(self, c1, kernel_size=7):
-        """
-        Initialize CBAM with given parameters.
-
-        Args:
-            c1 (int): Number of input channels.
-            kernel_size (int): Size of the convolutional kernel for spatial attention.
-        """
+    def __init__(self, c1, reduction=16):
         super().__init__()
-        self.channel_attention = ChannelAttention(c1)
-        self.spatial_attention = SpatialAttention(kernel_size)
+        self.channel_attention = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(c1, c1 // reduction, 1),
+            nn.ReLU(),
+            nn.Conv2d(c1 // reduction, c1, 1),
+            nn.Sigmoid()
+        )
+        self.spatial_attention = nn.Sequential(
+            nn.Conv2d(2, 1, 7, padding=3),
+            nn.Sigmoid()
+        )
 
     def forward(self, x):
-        """
-        Apply channel and spatial attention sequentially to input tensor.
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            (torch.Tensor): Attended output tensor.
-        """
-        return self.spatial_attention(self.channel_attention(x))
+        ca = self.channel_attention(x) * x
+        sa = self.spatial_attention(torch.cat([ca.mean(1, keepdim=True), ca.max(1, keepdim=True)[0]], 1))
+        return sa * ca
 
 
 class Concat(nn.Module):
