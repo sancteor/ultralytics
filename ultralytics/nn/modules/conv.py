@@ -666,19 +666,24 @@ class CBAM(nn.Module):
             nn.Conv2d(2, 1, 7, padding=3),
             nn.Sigmoid()
         )
-
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
+        print(f"[CBAM] input: {x.shape}")
+        
         avg_out = self.channel_mlp(self.avg_pool(x))
         max_out = self.channel_mlp(self.max_pool(x))
         ca = self.sigmoid(avg_out + max_out) * x
 
-        sa = self.spatial_attention(torch.cat(
+        sa_input = torch.cat(
             [ca.mean(1, keepdim=True), ca.max(1, keepdim=True)[0]], dim=1
-        ))
+        )
+        sa = self.spatial_attention(sa_input)
+        out = sa * ca
 
-        return sa * ca
+        print(f"[CBAM] output: {out.shape}")
+        return out
+
 
 
 class Concat(nn.Module):
