@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 from ultralytics.utils.torch_utils import fuse_conv_and_bn
 
-from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, autopad
+from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, autopad, Bottleneck
 from .transformer import TransformerBlock
 
 from .coordatt import CoordAtt
@@ -1149,21 +1149,7 @@ class C3k(C3):
         super().__init__(c1, c2, n, shortcut, g, e)
         c_ = int(c2 * e)  # hidden channels
         # self.m = nn.Sequential(*(RepBottleneck(c_, c_, shortcut, g, k=(k, k), e=1.0) for _ in range(n)))
-        self.m = nn.Sequential(*(Bottleneck(c_, c_, shortcut, g, k=(k, k), e=1.0) for _ in range(n)))
-
-
-class C3k2CA(C3k2):
-    """C3k2 + Coordinate Attention."""
-
-    def __init__(
-        self, c1: int, c2: int, n: int = 1, c3k: bool = False, e: float = 0.5, g: int = 1, shortcut: bool = True
-    ):
-        super().__init__(c1, c2, n=n, c3k=c3k, e=e, g=g, shortcut=shortcut)
-        self.ca = CoordAtt(c2, c2)
-
-    def forward(self, x):
-        out = super().forward(x)
-        return self.ca(out)        
+        self.m = nn.Sequential(*(Bottleneck(c_, c_, shortcut, g, k=(k, k), e=1.0) for _ in range(n)))   
 
 
 class RepVGGDW(torch.nn.Module):
