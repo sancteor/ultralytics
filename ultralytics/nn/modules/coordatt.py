@@ -32,3 +32,17 @@ class CoordAtt(nn.Module):
         a_h = self.conv_h(x_h).sigmoid()
         a_w = self.conv_w(x_w).sigmoid()
         return identity * a_h * a_w
+
+from .conv import Conv, Bottleneck
+from .block import C3k2
+
+class C3k2CA(C3k2):
+    """C3k2 + Coordinate Attention."""
+
+    def __init__(self, c1, c2, n=1, c3k=False, e=0.5, g=1, shortcut=True):
+        super().__init__(c1, c2, n=n, c3k=c3k, e=e, g=g, shortcut=shortcut)
+        self.ca = CoordAtt(c2, c2)
+
+    def forward(self, x):
+        out = super().forward(x)
+        return self.ca(out)
