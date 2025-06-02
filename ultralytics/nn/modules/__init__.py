@@ -43,7 +43,6 @@ from .block import (
     C2fPSA,
     C3Ghost,
     C3k2,
-    C3k2CA,
     C3x,
     CBFuse,
     CBLinear,
@@ -103,9 +102,14 @@ from .transformer import (
     TransformerLayer,
 )
 
-from .coordatt import CoordAtt, C2fCA
+from .coordatt import (
+    CoordAtt,
+    C3k2CA,
+)
 
 __all__ = (
+    "CoordAtt",
+    "C3k2CA",
     "Conv",
     "Conv2",
     "LightConv",
